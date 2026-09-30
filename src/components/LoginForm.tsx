@@ -1,4 +1,4 @@
-import {useState} from "react";
+import { useState } from "react";
 import {
     View,
     Text,
@@ -8,36 +8,32 @@ import {
     ActivityIndicator,
 } from "react-native";
 
-interface LoginFormProps {
-    onLogin: (
-        username: string,
-        password: string
-    ) => void;
-    loading: boolean;
-    error: string;
-}
+import { LoginFormProps } from "@/interfaces/Auth.Interface";
 
 export default function LoginForm({
                                       onLogin,
                                       loading,
-                                      error
+                                      error,
                                   }: LoginFormProps) {
-    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
     const handleLogin = () => {
-        if (!username.trim()) {
+        if (!email.trim()) {
             alert("Por favor ingresa tu usuario");
             return;
         }
+
         if (!password) {
             alert("Por favor ingresa tu contraseña");
             return;
         }
-        onLogin(username, password);
+
+        onLogin(email, password);
     };
 
-    const isFormValid = username.trim() !== "" && password !== "";
+    const isFormValid =
+        email.trim() !== "" && password !== "";
 
     return (
         <View style={styles.container}>
@@ -45,17 +41,19 @@ export default function LoginForm({
                 Iniciar sesión
             </Text>
 
-            {error && (
-                <View >
-                    <Text>⚠ {error}</Text>
+            {error ? (
+                <View style={styles.errorContainer}>
+                    <Text style={styles.error}>
+                        ⚠ {error}
+                    </Text>
                 </View>
-            )}
+            ) : null}
 
             <TextInput
                 style={styles.input}
                 placeholder="Usuario"
-                value={username}
-                onChangeText={setUsername}
+                value={email}
+                onChangeText={setEmail}
                 autoCapitalize="none"
                 editable={!loading}
                 placeholderTextColor="#999"
@@ -66,20 +64,28 @@ export default function LoginForm({
                 placeholder="Contraseña"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={true}
                 editable={!loading}
                 placeholderTextColor="#999"
             />
 
             <TouchableOpacity
-
+                style={[
+                    styles.button,
+                    (!isFormValid || loading) && styles.buttonDisabled,
+                ]}
                 onPress={handleLogin}
                 disabled={!isFormValid || loading}
             >
                 {loading ? (
-                    <ActivityIndicator color="#fff" size="small"/>
+                    <ActivityIndicator
+                        color="#fff"
+                        size="small"
+                    />
                 ) : (
-                    <Text>Iniciar Sesión</Text>
+                    <Text style={styles.buttonText}>
+                        Iniciar Sesión
+                    </Text>
                 )}
             </TouchableOpacity>
         </View>
@@ -94,6 +100,7 @@ const styles = StyleSheet.create({
         padding: 20,
         backgroundColor: "#f5f5f5",
     },
+
     title: {
         fontSize: 24,
         fontWeight: "bold",
@@ -101,6 +108,7 @@ const styles = StyleSheet.create({
         color: "#333",
         textAlign: "center",
     },
+
     input: {
         width: "100%",
         height: 50,
@@ -112,9 +120,36 @@ const styles = StyleSheet.create({
         fontSize: 16,
         backgroundColor: "#fff",
         color: "#333",
-    },    error: {
+    },
+
+    errorContainer: {
+        width: "100%",
+        marginBottom: 15,
+    },
+
+    error: {
         color: "red",
         fontSize: 16,
         fontWeight: "600",
+    },
+
+    button: {
+        width: "100%",
+        height: 50,
+        backgroundColor: "#007AFF",
+        borderRadius: 8,
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 10,
+    },
+
+    buttonDisabled: {
+        backgroundColor: "#999",
+    },
+
+    buttonText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "bold",
     },
 });

@@ -1,16 +1,17 @@
 export interface LoginRequest {
-    username: string;
+    email: string;
     password: string;
 }
 
 export interface LoginResponse {
-    SUCESS: string;
+    success: boolean;
     message: string;
+    flag?: boolean;
 }
 
-interface LoginFormProps {
+export interface LoginFormProps {
     onLogin: (
-        username: string,
+        email: string,
         password: string
     ) => void;
     loading: boolean;
