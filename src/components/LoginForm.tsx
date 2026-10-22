@@ -9,6 +9,8 @@ import {
 } from "react-native";
 
 import { LoginFormProps } from "@/interfaces/Auth.Interface";
+import {validateEmail, validatePassword} from "@/utils/validations";
+
 
 export default function LoginForm({
                                       onLogin,
@@ -18,22 +20,52 @@ export default function LoginForm({
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
+    const [emailError, setEmailError] = useState("");
+    const [passwordError, setPasswordError] = useState("");
+
+    const [showPassword, setShowPassword] = useState(false);
+
+    const handleEmailChange = (text: string) => {
+        setEmail(text);
+
+        if (text.trim() !== "") {
+            setEmailError("");
+        }
+    };
+
+    const handlePasswordChange = (text: string) => {
+        setPassword(text);
+
+        if (text !== "") {
+            setPasswordError("");
+        }
+    };
+
     const handleLogin = () => {
-        if (!email.trim()) {
-            alert("Por favor ingresa tu usuario");
+
+        setEmailError("");
+        setPasswordError("");
+
+        const emailValidationError = validateEmail(email);
+
+        if (emailValidationError) {
+            setEmailError(emailValidationError);
             return;
         }
 
-        if (!password) {
-            alert("Por favor ingresa tu contraseña");
+        const passwordValidationError = validatePassword(password);
+
+        if (passwordValidationError) {
+            setPasswordError(passwordValidationError);
             return;
         }
 
-        onLogin(email, password);
+        onLogin(email.trim(), password);
     };
 
     const isFormValid =
-        email.trim() !== "" && password !== "";
+        email.trim() !== "" &&
+        password !== "";
 
     return (
         <View style={styles.container}>
@@ -49,33 +81,75 @@ export default function LoginForm({
                 </View>
             ) : null}
 
-            <TextInput
-                style={styles.input}
-                placeholder="Usuario"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                editable={!loading}
-                placeholderTextColor="#999"
-            />
+            <View style={styles.inputContainer}>
+                <TextInput
+                    style={[
+                        styles.input,
+                        emailError && styles.inputError,
+                    ]}
+                    placeholder="Correo"
+                    value={email}
+                    onChangeText={handleEmailChange}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    editable={!loading}
+                    placeholderTextColor="#999"
+                />
 
-            <TextInput
-                style={styles.input}
-                placeholder="Contraseña"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={true}
-                editable={!loading}
-                placeholderTextColor="#999"
-            />
+                {emailError ? (
+                    <Text style={styles.fieldError}>
+                        {emailError}
+                    </Text>
+                ) : null}
+            </View>
+
+            <View style={styles.inputContainer}>
+                <View
+                    style={[
+                        styles.passwordContainer,
+                        passwordError && styles.inputError,
+                    ]}
+                >
+                    <TextInput
+                        style={styles.passwordInput}
+                        placeholder="Contraseña"
+                        value={password}
+                        onChangeText={handlePasswordChange}
+                        secureTextEntry={!showPassword}
+                        editable={!loading}
+                        placeholderTextColor="#999"
+                    />
+
+                    <TouchableOpacity
+                        onPress={() =>
+                            setShowPassword(!showPassword)
+                        }
+                        disabled={loading}
+                    >
+                        <Text style={styles.showPassword}>
+                            {showPassword
+                                ? "Ocultar"
+                                : "Mostrar"}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {passwordError ? (
+                    <Text style={styles.fieldError}>
+                        {passwordError}
+                    </Text>
+                ) : null}
+            </View>
 
             <TouchableOpacity
                 style={[
                     styles.button,
-                    (!isFormValid || loading) && styles.buttonDisabled,
+                    (!isFormValid || loading) &&
+                    styles.buttonDisabled,
                 ]}
                 onPress={handleLogin}
-                disabled={!isFormValid || loading}
+                disabled={ loading}
             >
                 {loading ? (
                     <ActivityIndicator
@@ -109,6 +183,11 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
 
+    inputContainer: {
+        width: "100%",
+        marginBottom: 15,
+    },
+
     input: {
         width: "100%",
         height: 50,
@@ -116,10 +195,45 @@ const styles = StyleSheet.create({
         borderColor: "#ddd",
         borderRadius: 8,
         paddingHorizontal: 15,
-        marginBottom: 15,
         fontSize: 16,
         backgroundColor: "#fff",
         color: "#333",
+    },
+
+    passwordContainer: {
+        width: "100%",
+        height: 50,
+        borderWidth: 1,
+        borderColor: "#ddd",
+        borderRadius: 8,
+        paddingLeft: 15,
+        paddingRight: 12,
+        backgroundColor: "#fff",
+        flexDirection: "row",
+        alignItems: "center",
+    },
+
+    passwordInput: {
+        flex: 1,
+        fontSize: 16,
+        color: "#333",
+    },
+
+    showPassword: {
+        color: "#007AFF",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+
+    inputError: {
+        borderColor: "#FF3B30",
+    },
+
+    fieldError: {
+        color: "#FF3B30",
+        fontSize: 13,
+        marginTop: 5,
+        marginLeft: 3,
     },
 
     errorContainer: {

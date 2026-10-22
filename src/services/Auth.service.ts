@@ -16,6 +16,7 @@ export const loginService = async (
             body: JSON.stringify(data),
         }
     );
+
     const result = await response.json();
 
     if (!response.ok) {
@@ -28,7 +29,6 @@ export const loginService = async (
     return {
         success: true,
         message: result.message || "Usuario logeado",
-
+        token: result.token,
     };
-
 };
