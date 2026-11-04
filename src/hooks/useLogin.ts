@@ -10,7 +10,6 @@ export const useLogin = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    // Inicializamos el dispatch
     const dispatch = useDispatch();
 
     const login = async (data: LoginRequest): Promise<boolean> => {
@@ -25,19 +24,23 @@ export const useLogin = () => {
                 return false;
             }
 
-            const token = response.token || response.data?.token;
+            const token = response.accessToken;
 
-            if (token) {
-                await saveToken(token);
-                dispatch(setToken(token));
-            } else {
-                console.warn("Login exitoso, pero no se recibió el token del backend");
+            if (!token) {
+                setError("No se recibió el token del servidor");
+                return false;
             }
 
+            await saveToken(token);
+            dispatch(setToken(token));
+
             return true;
+
         } catch (error) {
-            setError("Ocurrió un error");
+            console.error("Error en login:", error);
+            setError("Ocurrió un error al iniciar sesión");
             return false;
+
         } finally {
             setLoading(false);
         }

@@ -1,10 +1,12 @@
-export interface User {
-  id: number;
-  email: string;
-  nombre?: string;
-  apellido?: string;
-  matricula?: string;
-}
+// export interface User {
+//   id: number;
+//   email: string;
+//   nombre?: string;
+//   apellido?: string;
+//   matricula?: string;
+// }
+
+import {User} from "@/types/user";
 
 export interface LoginCredentials {
   email: string;

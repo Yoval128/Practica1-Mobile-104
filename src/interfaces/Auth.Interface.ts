@@ -6,8 +6,14 @@ export interface LoginRequest {
 export interface LoginResponse {
     success: boolean;
     message: string;
-    token?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    user?: {
+        id: number;
+        email: string;
+    };
 }
+
 export interface LoginFormProps {
     onLogin: (
         email: string,

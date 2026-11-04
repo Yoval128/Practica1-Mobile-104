@@ -1,122 +1,161 @@
-import { useState, useEffect, useCallback } from 'react';
-import { User, LoginCredentials, RegisterData } from '../types/auth';
-import { ApiError, ErrorType } from '../types/errors';
-import { authApi } from '../api/auth.api';
-import { storage } from '../utils/storage';
+/**
+ * Hook personalizado para manejo de autenticación
+ * Encapsula login, logout, registro y manejo de tokens
+ */
 
-interface UseAuthReturn {
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import * as authApi from '../api/auth.api';
+import { saveAccessToken, saveRefreshToken, getAccessToken, clearTokens } from '../utils/storage';
+import { handleApiError, ApiError } from '../utils/errorHandler';
+import { User } from '../types/user';
+
+interface UseAuthState {
   user: User | null;
   loading: boolean;
   error: ApiError | null;
   isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<boolean>;
-  register: (data: RegisterData) => Promise<boolean>;
+}
+
+interface UseAuthReturn extends UseAuthState {
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
 }
 
-export const useAuth = (): UseAuthReturn => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
+export function useAuth(): UseAuthReturn {
+  const router = useRouter();
+  const [state, setState] = useState<UseAuthState>({
+    user: null,
+    loading: false,
+    error: null,
+    isAuthenticated: false,
+  });
 
-  const clearError = () => setError(null);
-
+  /**
+   * Verifica si hay una sesión activa al cargar el hook
+   */
   const checkAuth = useCallback(async () => {
     try {
-      setLoading(true);
-      const token = await storage.getToken();
-      
-      if (token) {
-        const profile = await authApi.getProfile();
-        setUser(profile);
-      } else {
-        setUser(null);
+      const token = await getAccessToken();
+      if (!token) {
+        setState((prev) => ({ ...prev, isAuthenticated: false }));
+        return;
       }
-    } catch (err) {
-      console.error('Error verificando auth:', err);
-      await storage.clearAll();
-      setUser(null);
-    } finally {
-      setLoading(false);
+
+      setState((prev) => ({ ...prev, loading: true }));
+      const user = await authApi.getCurrentUser();
+      setState({
+        user,
+        loading: false,
+        error: null,
+        isAuthenticated: true,
+      });
+    } catch (error) {
+      setState({
+        user: null,
+        loading: false,
+        error: null,
+        isAuthenticated: false,
+      });
     }
   }, []);
 
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+  /**
+   * Inicia sesión con email y password
+   */
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    setState((prev) => ({ ...prev, loading: true, error: null }));
 
-  const login = useCallback(async (credentials: LoginCredentials): Promise<boolean> => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await authApi.login(credentials);
-      
-      await storage.saveToken(response.accessToken);
-      if (response.refreshToken) {
-        await storage.saveRefreshToken(response.refreshToken);
-      }
-      
-      setUser(response.user);
+      const response = await authApi.login({ email, password });
+
+      // Guardar tokens de forma segura
+      await saveAccessToken(response.token);
+      await saveRefreshToken(response.refreshToken);
+
+      setState({
+        user: response.user,
+        loading: false,
+        error: null,
+        isAuthenticated: true,
+      });
+
       return true;
-    } catch (err) {
-      const apiError = err instanceof ApiError 
-        ? err 
-        : new ApiError(ErrorType.UNKNOWN, 'Error en login');
-      setError(apiError);
+    } catch (error) {
+      const apiError = handleApiError(error);
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        error: apiError,
+        isAuthenticated: false,
+      }));
       return false;
-    } finally {
-      setLoading(false);
     }
   }, []);
 
-  const register = useCallback(async (data: RegisterData): Promise<boolean> => {
+  /**
+   * Registra un nuevo usuario
+   */
+  const register = useCallback(async (email: string, password: string): Promise<boolean> => {
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+
     try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await authApi.register(data);
-      
-      await storage.saveToken(response.accessToken);
-      if (response.refreshToken) {
-        await storage.saveRefreshToken(response.refreshToken);
-      }
-      
-      setUser(response.user);
-      return true;
-    } catch (err) {
-      const apiError = err instanceof ApiError 
-        ? err 
-        : new ApiError(ErrorType.UNKNOWN, 'Error en registro');
-      setError(apiError);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      await authApi.register({ email, password });
 
+      // Después del registro, iniciar sesión automáticamente
+      return await login(email, password);
+    } catch (error) {
+      const apiError = handleApiError(error);
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        error: apiError,
+      }));
+      return false;
+    }
+  }, [login]);
+
+  /**
+   * Cierra sesión y limpia tokens
+   */
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
     } catch (error) {
-      console.log('Error en logout:', error);
+      // Ignorar errores de logout
     } finally {
-      await storage.clearAll();
-      setUser(null);
+      await clearTokens();
+      setState({
+        user: null,
+        loading: false,
+        error: null,
+        isAuthenticated: false,
+      });
+      router.replace('/');
     }
+  }, [router]);
+
+  /**
+   * Limpia el error del estado
+   */
+  const clearError = useCallback(() => {
+    setState((prev) => ({ ...prev, error: null }));
   }, []);
 
+  // Verificar autenticación al montar el componente
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
   return {
-    user,
-    loading,
-    error,
-    isAuthenticated: !!user,
+    ...state,
     login,
     register,
     logout,
     checkAuth,
     clearError,
   };
-};
+}

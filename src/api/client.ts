@@ -1,119 +1,80 @@
-import axios, {AxiosError, InternalAxiosRequestConfig} from "axios";
-import {handleApiError, storage} from "@/utils";
+/**
+ * Cliente HTTP configurado con Axios
+ * Incluye interceptores para manejo automático de tokens y errores
+ */
 
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { getAccessToken, getRefreshToken, saveAccessToken, saveRefreshToken, clearTokens } from '../utils/storage';
 
+// URL base del backend - cambiar según tu configuración
 const API_BASE_URL = 'http://localhost:3000/api';
 
-export const apiClient = axios.create({
+// Instancia de Axios configurada
+const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (token: string) => void;
-  reject: (error: any) => void;
-}> = [];
-
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((promise) => {
-    if (error) {
-      promise.reject(error);
-    } else if (token) {
-      promise.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
-
-const refreshAccessToken = async (): Promise<string | null> => {
-  try {
-    const refreshToken = await storage.getRefreshToken();
-    
-    if (!refreshToken) {
-      return null;
-    }
-
-    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-      refreshToken,
-    });
-
-    const { accessToken, refreshToken: newRefreshToken } = response.data;
-    
-    await storage.saveToken(accessToken);
-    if (newRefreshToken) {
-      await storage.saveRefreshToken(newRefreshToken);
-    }
-    
-    return accessToken;
-  } catch (error) {
-    console.error('Error refrescando token:', error);
-    await storage.clearAll();
-    return null;
-  }
-};
-
+// Interceptor de request: agrega el token de acceso automáticamente
 apiClient.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    try {
-      const token = await storage.getToken();
+    async (config: InternalAxiosRequestConfig) => {
+      const token = await getAccessToken();
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
       return config;
-    } catch (error) {
-      console.error('Error en interceptor request:', error);
-      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
     }
-  },
-  (error: AxiosError) => {
-    return Promise.reject(error);
-  }
 );
 
+// Interceptor de response: maneja errores 401 y renueva tokens
 apiClient.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config as any;
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return apiClient(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
-      }
+      // Si es error 401 y no es un intento de refresh
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
 
-      originalRequest._retry = true;
-      isRefreshing = true;
+        try {
+          // Intentar renovar el token
+          const refreshToken = await getRefreshToken();
 
-      try {
-        const newToken = await refreshAccessToken();
-        
-        if (newToken) {
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          processQueue(null, newToken);
+          if (!refreshToken) {
+            // No hay refresh token, redirigir a login
+            await clearTokens();
+            return Promise.reject(error);
+          }
+
+          // Llamar al endpoint de refresh
+          const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+            refreshToken,
+          });
+
+          const { token, refreshToken: newRefreshToken } = response.data;
+
+          // Guardar nuevos tokens
+          await saveAccessToken(token);
+          await saveRefreshToken(newRefreshToken);
+
+          // Reintentar la petición original con el nuevo token
+          originalRequest.headers.Authorization = `Bearer ${token}`;
           return apiClient(originalRequest);
-        } else {
-          processQueue(error, null);
-          const apiError = handleApiError(error);
-          return Promise.reject(apiError);
+        } catch (refreshError) {
+          // Error al refrescar, limpiar tokens y rechazar
+          await clearTokens();
+          return Promise.reject(refreshError);
         }
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-        return Promise.reject(handleApiError(refreshError));
-      } finally {
-        isRefreshing = false;
       }
-    }
 
-    return Promise.reject(handleApiError(error));
-  }
+      return Promise.reject(error);
+    }
 );
+
+export default apiClient;

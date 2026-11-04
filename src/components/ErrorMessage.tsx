@@ -1,115 +1,105 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { ApiError, ErrorType } from '../types/errors';
+import React, { useCallback, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { ApiError } from '../utils/errorHandler';
 
 interface ErrorMessageProps {
-  error: ApiError | null;
+  error: ApiError | string;
   onRetry?: () => void;
-  onDismiss?: () => void;
 }
 
-export const ErrorMessage: React.FC<ErrorMessageProps> = ({ 
-  error, 
-  onRetry, 
-  onDismiss 
-}) => {
-  if (!error) return null;
+export default function ErrorMessage({ error, onRetry }: ErrorMessageProps) {
+  const message = typeof error === 'string'
+      ? error
+      : error?.message || 'Error desconocido';
 
-  const getIcon = () => {
-    switch (error.type) {
-      case ErrorType.NETWORK_ERROR:
-        return '🔌';
-      case ErrorType.UNAUTHORIZED:
-        return '🔐';
-      case ErrorType.VALIDATION_ERROR:
-        return '⚠️';
-      case ErrorType.SERVER_ERROR:
-        return '🖥️';
-      default:
-        return '❌';
+  const onRetryRef = useRef(onRetry);
+
+  useEffect(() => {
+    onRetryRef.current = onRetry;
+  }, [onRetry]);
+
+  const handleRetry = useCallback(() => {
+    if (onRetryRef.current) {
+      Alert.alert(
+          'Reintentar',
+          '¿Seguro que deseas intentar de nuevo?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Sí',
+              onPress: () => onRetryRef.current?.()
+            }
+          ]
+      );
     }
-  };
-
-  const canRetry = error.type === ErrorType.NETWORK_ERROR || 
-                   error.type === ErrorType.TIMEOUT;
+  }, []);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.icon}>{getIcon()}</Text>
-        <Text style={styles.message}>{error.message}</Text>
-      </View>
-      
-      <View style={styles.actions}>
-        {canRetry && onRetry && (
-          <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-            <Text style={styles.retryText}>Reintentar</Text>
-          </TouchableOpacity>
+      <View style={styles.container}>
+        <View style={styles.iconContainer}>
+          <Text
+              style={styles.icon}
+              accessibilityLabel="Advertencia"
+              accessibilityRole="image"
+          >
+            ⚠️
+          </Text>
+        </View>
+
+        <Text style={styles.title}>¡Oops!</Text>
+
+        <Text style={styles.message}>{message}</Text>
+
+        {onRetry && (
+            <TouchableOpacity
+                style={styles.retryButton}
+                onPress={handleRetry}
+                accessible={true}
+                accessibilityLabel="Reintentar"
+                accessibilityHint="Vuelve a intentar la operación fallida"
+            >
+              <Text style={styles.retryText}>Intentar de nuevo</Text>
+            </TouchableOpacity>
         )}
-        
-        {onDismiss && (
-          <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
-            <Text style={styles.dismissText}>Cerrar</Text>
-          </TouchableOpacity>
-        )}
       </View>
-    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    margin: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#ff4444',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  content: {
-    flexDirection: 'row',
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    padding: 20,
+  },
+  iconContainer: {
+    marginBottom: 16,
   },
   icon: {
+    fontSize: 48,
+  },
+  title: {
     fontSize: 24,
-    marginRight: 12,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 8,
   },
   message: {
-    flex: 1,
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 24,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
-    marginRight: 8,
   },
   retryText: {
-    color: '#fff',
-    fontSize: 14,
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
-  },
-  dismissButton: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  dismissText: {
-    color: '#666',
-    fontSize: 14,
   },
 });

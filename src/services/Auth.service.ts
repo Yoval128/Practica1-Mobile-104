@@ -1,5 +1,5 @@
-import {LoginRequest, LoginResponse} from "@/interfaces/Auth.Interface";
-import {API_ULR} from "@/constants/api";
+import { LoginRequest, LoginResponse } from "@/interfaces/Auth.Interface";
+import { API_ULR } from "@/constants/api";
 
 export const loginService = async (
     data: LoginRequest
@@ -29,6 +29,8 @@ export const loginService = async (
     return {
         success: true,
         message: result.message || "Usuario logeado",
-        token: result.token,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        user: result.user,
     };
 };

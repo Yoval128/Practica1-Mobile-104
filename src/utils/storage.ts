@@ -1,64 +1,45 @@
+/**
+ * Utilidades para almacenamiento seguro de tokens
+ * Usa SecureStore de Expo para almacenar tokens de forma segura
+ */
+
 import * as SecureStore from 'expo-secure-store';
 
-const TOKEN_KEY = 'user_token';
+const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
-export const storage = {
-  async saveToken(token: string): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(TOKEN_KEY, token);
-    } catch (error) {
-      console.error('Error guardando token:', error);
-      throw new Error('No se pudo guardar el token');
-    }
-  },
+/**
+ * Guarda el access token de forma segura
+ */
+export async function saveAccessToken(token: string): Promise<void> {
+  await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, token);
+}
 
-  async getToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(TOKEN_KEY);
-    } catch (error) {
-      console.error('Error obteniendo token:', error);
-      return null;
-    }
-  },
+/**
+ * Obtiene el access token almacenado
+ */
+export async function getAccessToken(): Promise<string | null> {
+  return await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+}
 
-  async removeToken(): Promise<void> {
-    try {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-    } catch (error) {
-      console.error('Error eliminando token:', error);
-    }
-  },
+/**
+ * Guarda el refresh token de forma segura
+ */
+export async function saveRefreshToken(token: string): Promise<void> {
+  await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
+}
 
-  async saveRefreshToken(token: string): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
-    } catch (error) {
-      console.error('Error guardando refresh token:', error);
-    }
-  },
+/**
+ * Obtiene el refresh token almacenado
+ */
+export async function getRefreshToken(): Promise<string | null> {
+  return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+}
 
-  async getRefreshToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
-    } catch (error) {
-      console.error('Error obteniendo refresh token:', error);
-      return null;
-    }
-  },
-
-  async removeRefreshToken(): Promise<void> {
-    try {
-      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
-    } catch (error) {
-      console.error('Error eliminando refresh token:', error);
-    }
-  },
-
-  async clearAll(): Promise<void> {
-    await Promise.all([
-      this.removeToken(),
-      this.removeRefreshToken(),
-    ]);
-  },
-};
+/**
+ * Elimina todos los tokens almacenados (logout)
+ */
+export async function clearTokens(): Promise<void> {
+  await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+  await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+}

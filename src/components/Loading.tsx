@@ -1,36 +1,46 @@
-import React from 'react';
-import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { ActivityIndicator, Text, StyleSheet, Animated } from 'react-native';
 
 interface LoadingProps {
   message?: string;
-  fullScreen?: boolean;
+  size?: 'small' | 'large';
 }
 
-export const Loading: React.FC<LoadingProps> = ({ 
-  message = 'Cargando...', 
-  fullScreen = false 
-}) => {
+export default function Loading({ message = 'Cargando...', size = 'large' }: LoadingProps) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    });
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [fadeAnim]);
+
   return (
-    <View style={[styles.container, fullScreen && styles.fullScreen]}>
-      <ActivityIndicator size="large" color="#007AFF" />
-      {message && <Text style={styles.message}>{message}</Text>}
-    </View>
+      <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+        <ActivityIndicator size={size} color="#3B82F6" />
+        {message && <Text style={styles.message}>{message}</Text>}
+      </Animated.View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fullScreen: {
     flex: 1,
-    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   message: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
+    color: '#6B7280',
   },
 });
