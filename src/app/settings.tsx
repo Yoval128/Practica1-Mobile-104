@@ -6,12 +6,14 @@ import {
 } from "react-native";
 
 import { useRouter } from "expo-router";
+import {clearTokens} from "@/utils";
 
 export default function SettingsScreen() {
 
     const router = useRouter();
 
-    const handleLogout = () => {
+    const handleLogout =async () => {
+        await clearTokens();
         router.replace("/");
     };
 

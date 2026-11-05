@@ -7,41 +7,50 @@ import {
 } from "react-native";
 
 import SideMenu from "../components/SideMenu";
-import {useRouter} from "expo-router";
+import { useRouter } from "expo-router";
+import { useDispatch } from "react-redux";
+import { clearTokens } from "@/utils/storage";
+import { logout } from "@/store/authSlice";
 
 export default function HomeScreen() {
     const [menuOpen, setMenuOpen] = useState(false);
     const router = useRouter();
+    const dispatch = useDispatch();
 
+    const handleLogout = async () => {
+        try {
+            await clearTokens();
 
+            dispatch(logout());
+
+            setMenuOpen(false);
+
+            router.replace("/");
+        } catch (error) {
+            console.error("Error al cerrar sesión:", error);
+        }
+    };
 
     return (
         <View style={styles.container}>
 
             {/* Encabezado */}
             <View style={styles.header}>
-
                 <TouchableOpacity
                     onPress={() => setMenuOpen(true)}
                 >
-                    <Text style={styles.menuIcon}>
-                        ☰
-                    </Text>
+                    <Text style={styles.menuIcon}>☰</Text>
                 </TouchableOpacity>
 
                 <Text style={styles.greeting}>
                     Hola, Ana
                 </Text>
 
-                <Text style={styles.profile}>
-                    👤
-                </Text>
-
+                <Text style={styles.profile}>👤</Text>
             </View>
 
             {/* Contenido principal */}
             <View style={styles.content}>
-
                 <Text style={styles.title}>
                     ¡Bienvenida!
                 </Text>
@@ -49,33 +58,27 @@ export default function HomeScreen() {
                 <Text style={styles.subtitle}>
                     Nos alegra verte nuevamente.
                 </Text>
-
             </View>
 
             {/* Menú lateral */}
             <SideMenu
                 visible={menuOpen}
                 onClose={() => setMenuOpen(false)}
-
                 onProfile={() => {
                     setMenuOpen(false);
                     router.push("/profile");
                 }}
-
                 onSettings={() => {
                     setMenuOpen(false);
                     router.push("/settings");
                 }}
-
-                onLogout={() => {
-                    setMenuOpen(false);
-                    router.replace("/");
-                }}
+                onLogout={handleLogout}
             />
 
         </View>
     );
 }
+
 
 const styles = StyleSheet.create({
 

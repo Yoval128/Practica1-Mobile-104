@@ -1,7 +1,14 @@
 
+/**
+ * Layout raíz de la aplicación
+ * Configura el Stack Navigator principal
+ * Proporciona el contexto Redux a toda la aplicación
+ */
+
 import { Stack } from "expo-router";
 import { Provider } from "react-redux";
-import { store } from "@/store";
+import {store} from "@/store";
+
 
 export default function RootLayout() {
     return (
@@ -13,33 +20,23 @@ export default function RootLayout() {
                 />
 
                 <Stack.Screen
-                    name="login"
+                    name="(tabs)"
                     options={{ headerShown: false }}
                 />
 
                 <Stack.Screen
-                    name="register"
-                    options={{ headerShown: false }}
-                />
-
-                <Stack.Screen
-                    name="home"
-                    options={{ headerShown: false }}
-                />
-
-                <Stack.Screen
-                    name="profile"
-                    options={{ headerShown: false }}
-                />
-
-                <Stack.Screen
-                    name="settings"
-                    options={{ headerShown: false }}
-                />
-
-                <Stack.Screen
-                    name="explore"
-                    options={{ headerShown: false }}
+                    name="student/[id]"
+                    options={{
+                        headerShown: true,
+                        title: "Detalle de Estudiante",
+                        headerStyle: {
+                            backgroundColor: "#FFFFFF",
+                        },
+                        headerTitleStyle: {
+                            fontWeight: "600",
+                        },
+                        headerTintColor: "#111827",
+                    }}
                 />
             </Stack>
         </Provider>
