@@ -16,10 +16,20 @@ interface State {
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
+  private isMounted: boolean = false;
+
   public state: State = {
     hasError: false,
     error: null,
   };
+
+  public componentDidMount() {
+    this.isMounted = true;
+  }
+
+  public componentWillUnmount() {
+    this.isMounted = false;
+  }
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
@@ -30,7 +40,9 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   private handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    if (this.isMounted) {
+      this.setState({ hasError: false, error: null });
+    }
   };
 
   public render() {
@@ -40,15 +52,15 @@ export default class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <View style={styles.container}>
-          <Text style={styles.title}>Algo salió mal</Text>
-          <Text style={styles.message}>
-            {this.state.error?.message || 'Error desconocido'}
-          </Text>
-          <TouchableOpacity style={styles.button} onPress={this.handleReset}>
-            <Text style={styles.buttonText}>Intentar de nuevo</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.container}>
+            <Text style={styles.title}>Algo salió mal</Text>
+            <Text style={styles.message}>
+              {this.state.error && this.state.error.message ? this.state.error.message : 'Error desconocido'}
+            </Text>
+            <TouchableOpacity style={styles.button} onPress={this.handleReset}>
+              <Text style={styles.buttonText}>Intentar de nuevo</Text>
+            </TouchableOpacity>
+          </View>
       );
     }
 

@@ -1,58 +1,43 @@
 /**
- * Pantalla de Login
- * Punto de entrada principal - redirige según estado de autenticación
+ * Punto de entrada - Verifica autenticación
  */
 
-import { StyleSheet, View } from "react-native";
-import { useRouter } from "expo-router";
-import { useEffect } from "react";
-import LoginForm from "../components/LoginForm";
-import { useLogin } from "../hooks/useLogin";
-import { getAccessToken } from "../utils/storage";
-import {LoginRequest} from "@/interfaces/Auth.Interface";
+import React, { useEffect } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuthContext } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
-export default function LoginScreen() {
+export default function Index() {
     const router = useRouter();
-    const { login, loading, error } = useLogin();
+    const { isAuthenticated, loading } = useAuthContext();
+    const { colors } = useTheme();
 
-    // Verificar si ya hay sesión activa
     useEffect(() => {
-        checkExistingSession();
-    }, []);
-
-    const checkExistingSession = async () => {
-        const token = await getAccessToken();
-        if (token) {
-            // Si hay token, ir a tabs
-            router.replace("/home" as any);
+        if (!loading) {
+            if (isAuthenticated) {
+                router.replace('/(tabs)');
+            } else {
+                router.replace('/login');
+            }
         }
-    };
+    }, [isAuthenticated, loading]);
 
-    const handleLogin = async (data: LoginRequest) => {
-        const success = await login(data);
-        if (success) {
-            router.replace("/home" as any);
-        }
-    };
+    if (loading) {
+        return (
+            <View style={[styles.container, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+        );
+    }
 
-    return (
-        <View style={styles.container}>
-            <LoginForm
-                onLogin={(email, password) =>
-                    handleLogin({ email, password })
-                }
-                loading={loading}
-                error={error}
-            />
-        </View>
-    );
+    return null;
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

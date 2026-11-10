@@ -1,16 +1,9 @@
-
 /**
  * Componente de barra de búsqueda con debounce
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  Text,
-} from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity, Text } from 'react-native';
 
 interface SearchBarProps {
   value: string;
@@ -23,12 +16,12 @@ interface SearchBarProps {
 export default function SearchBar({
                                     value,
                                     onChangeText,
-                                    placeholder = 'Buscar...',
+                                    placeholder = "Buscar...",
                                     onClear,
-                                    debounceMs = 300,
+                                    debounceMs = 300
                                   }: SearchBarProps) {
   const [localValue, setLocalValue] = useState(value);
-
+  // Se utiliza ReturnType<typeof setTimeout> en lugar de NodeJS.Timeout
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -40,35 +33,21 @@ export default function SearchBar({
       clearTimeout(debounceTimer.current);
     }
 
-    if (localValue === value) {
-      return;
-    }
-
     debounceTimer.current = setTimeout(() => {
       onChangeText(localValue);
-      debounceTimer.current = null;
     }, debounceMs);
 
     return () => {
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
-        debounceTimer.current = null;
       }
     };
-  }, [localValue, value, debounceMs, onChangeText]);
+  }, [localValue, debounceMs, onChangeText]);
 
   const handleClear = () => {
     setLocalValue('');
-
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-      debounceTimer.current = null;
-    }
-
     if (onClear) {
       onClear();
-    } else {
-      onChangeText('');
     }
   };
 
@@ -80,14 +59,8 @@ export default function SearchBar({
             value={localValue}
             onChangeText={setLocalValue}
         />
-
         {localValue.length > 0 && (
-            <TouchableOpacity
-                style={styles.clearButton}
-                onPress={handleClear}
-                accessibilityRole="button"
-                accessibilityLabel="Limpiar búsqueda"
-            >
+            <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
               <Text style={styles.clearText}>X</Text>
             </TouchableOpacity>
         )}

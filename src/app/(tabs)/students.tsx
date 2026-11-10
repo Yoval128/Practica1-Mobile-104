@@ -1,95 +1,44 @@
 /**
- * Pantalla de lista de estudiantes
- * Consume la API del backend y muestra los estudiantes con FlatList
+ * Pantalla de estudiantes
  */
 
-import React, { useEffect, useCallback } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
-import { useRouter, RelativePathString } from 'expo-router';
-import { useApi } from '../../hooks/useApi';
-import { getStudents } from '../../api/students.api';
-import { Student } from '../../types/student';
-import { StudentCard, Loading, ErrorMessage } from '../../components';
+import React from 'react';
+import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useStudents } from '../../hooks/useStudents';
+import StudentList from '../../components/StudentList';
+import { useTheme } from '../../context/ThemeContext';
+import { ErrorMessage, Loading } from '../../components';
 
 export default function StudentsScreen() {
   const router = useRouter();
-  const { data: students, loading, error, execute: loadStudents } = useApi(getStudents);
+  const { students, loading, error, refresh } = useStudents();
+  const { colors } = useTheme();
 
-  // Cargar estudiantes al montar el componente
-  useEffect(() => {
-    loadStudents();
-  }, [loadStudents]);
+  const handleStudentPress = (student: any) => {
+    router.push(`/students/${student.id}`);
+  };
 
-  // Función para refrescar la lista (pull-to-refresh)
-  const handleRefresh = useCallback(() => {
-    loadStudents();
-  }, [loadStudents]);
-
-  // Navegar al detalle del estudiante
-  const handleStudentPress = useCallback((student: Student) => {
-    // Usar navegación con parámetros
-    router.push(`/student/${student.id}` as RelativePathString);
-  }, [router]);
-
-  // Estado de carga
-  if (loading && !students) {
+  if (loading) {
     return <Loading message="Cargando estudiantes..." />;
   }
 
-  // Estado de error
-  if (error && !students) {
-    return <ErrorMessage error={error} onRetry={loadStudents} />;
+  if (error) {
+    return <ErrorMessage error={error} onRetry={refresh} />;
   }
-
-  // Lista vacía
-  if (!students || students.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <ErrorMessage 
-          error="No hay estudiantes registrados" 
-        />
-      </View>
-    );
-  }
-
-  // Renderizar cada estudiante
-  const renderStudent = ({ item }: { item: Student }) => (
-    <StudentCard student={item} onPress={handleStudentPress} />
-  );
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={students}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderStudent}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={handleRefresh}
-            colors={['#3B82F6']}
-            tintColor="#3B82F6"
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StudentList
+            students={students}
+            onStudentPress={handleStudentPress}
+        />
+      </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  list: {
-    padding: 16,
-    paddingBottom: 20,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: '#F5F7FA',
   },
 });

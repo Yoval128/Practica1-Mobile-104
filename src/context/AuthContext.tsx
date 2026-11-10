@@ -2,7 +2,7 @@
  * Context para manejo global de autenticación
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { User } from '../types/user';
 import * as authApi from '../api/auth.api';
 import { saveAccessToken, saveRefreshToken, getAccessToken, clearTokens } from '../utils/storage';
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const response = await authApi.login({ email, password });
 
-      await saveAccessToken(response.token);
+      await saveAccessToken(response.accessToken);
       await saveRefreshToken(response.refreshToken);
 
       setUser(response.user);
@@ -88,19 +88,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuth();
   }, [checkAuth]);
 
-  const value: AuthContextType = {
+  const value = useMemo<AuthContextType>(() => ({
     user,
     loading,
     error,
     isAuthenticated,
     login,
     logout,
-  };
+  }), [user, loading, error, isAuthenticated, login, logout]);
 
   return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+      <AuthContext.Provider value={value}>
+        {children}
+      </AuthContext.Provider>
   );
 }
 

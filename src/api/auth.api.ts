@@ -3,11 +3,8 @@
  * Funciones para login, registro, refresh token y logout
  */
 
-import apiClient from "@/api/client";
-import {User, UserMeResponse} from "@/types/user";
-
-// import apiClient from './client';
-// import { User, UserMeResponse } from '../types/user';
+import apiClient from './client';
+import { User, UserMeResponse } from '../types/user';
 
 export interface LoginRequest {
     email: string;
@@ -15,7 +12,7 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-    token: string;
+    accessToken: string;
     refreshToken: string;
     user: User;
 }
@@ -30,7 +27,7 @@ export interface RefreshTokenRequest {
 }
 
 export interface RefreshTokenResponse {
-    token: string;
+    accessToken: string;
     refreshToken: string;
 }
 
@@ -55,9 +52,11 @@ export async function register(data: RegisterRequest): Promise<{ user: User }> {
  * Obtiene la información del usuario actual
  * Requiere token de autenticación
  */
-export async function getCurrentUser(): Promise<User> {
-    const response = await apiClient.get<UserMeResponse>('/api/auth/me');
-    return response.data.user;
+export async function getCurrentUser(signal?: AbortSignal): Promise<User> {
+    const response = await apiClient.get<UserMeResponse>('/api/auth/me', { signal });
+    // Si UserMeResponse es igual a User, usa: return response.data;
+    // Si UserMeResponse es { data: User }, asegúrate de definir la interfaz con `data: User` y usa:
+    return response.data.data;
 }
 
 /**

@@ -1,74 +1,67 @@
 /**
- * Pantalla de inicio (Home)
- * Muestra un mensaje de bienvenida al usuario
+ * Pantalla de inicio
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useAuth } from '../../hooks/useAuth';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useTheme } from '../../context/ThemeContext';
+import { useAuthContext } from '../../context/AuthContext';
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { colors } = useTheme();
+  const { user } = useAuthContext();
+
+  const quickActions = [
+    { title: 'Ver Estudiantes', route: '/students', color: '#3B82F6' },
+    { title: 'Mi Perfil', route: '/profile', color: '#10B981' },
+    { title: 'Ajustes', route: '/settings', color: '#8B5CF6' },
+  ];
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.welcomeCard}>
-          <Text style={styles.emoji}>👋</Text>
-          <Text style={styles.welcomeTitle}>¡Bienvenido!</Text>
-          <Text style={styles.welcomeSubtitle}>
-            {user?.email || 'Usuario'}
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.content}>
+          <View style={[styles.welcomeCard, { backgroundColor: colors.card }]}>
+            <Text style={[styles.welcomeTitle, { color: colors.text }]}>
+              Bienvenido
+            </Text>
+            <Text style={[styles.welcomeSubtitle, { color: colors.secondary }]}>
+              {user ? user.email : 'Usuario'}
+            </Text>
+          </View>
+
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Acciones rapidas
           </Text>
+
+          {quickActions.map((action, index) => (
+              <TouchableOpacity
+                  key={index}
+                  style={[styles.actionCard, { backgroundColor: colors.card }]}
+                  onPress={() => router.push(action.route as any)}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: action.color }]} />
+                <View style={styles.actionContent}>
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>
+                    {action.title}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+          ))}
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Acciones rápidas</Text>
-          
-          <View style={styles.actionCard}>
-            <Text style={styles.actionIcon}>📝</Text>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Ver estudiantes</Text>
-              <Text style={styles.actionDescription}>
-                Administra la lista de estudiantes
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.actionCard}>
-            <Text style={styles.actionIcon}>➕</Text>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Agregar estudiante</Text>
-              <Text style={styles.actionDescription}>
-                Registra un nuevo estudiante
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.actionCard}>
-            <Text style={styles.actionIcon}>👤</Text>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Mi perfil</Text>
-              <Text style={styles.actionDescription}>
-                Ver y editar tu información
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
   },
   content: {
     padding: 20,
   },
   welcomeCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -79,35 +72,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  emoji: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
   welcomeTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#111827',
     marginBottom: 8,
   },
   welcomeSubtitle: {
     fontSize: 16,
-    color: '#6B7280',
-  },
-  section: {
-    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 16,
   },
   actionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -116,7 +98,9 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   actionIcon: {
-    fontSize: 32,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     marginRight: 16,
   },
   actionContent: {
@@ -125,11 +109,5 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  actionDescription: {
-    fontSize: 14,
-    color: '#6B7280',
   },
 });

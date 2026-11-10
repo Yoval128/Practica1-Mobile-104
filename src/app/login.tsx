@@ -1,25 +1,17 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import {ErrorMessage, Loading} from "@/components";
-import {useAuth} from "@/hooks";
+/**
+ * Pantalla de login simple
+ */
 
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import axios from 'axios';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { login, loading, error, clearError } = useAuth();
   const router = useRouter();
+  const [email, setEmail] = useState('ana@test.com');
+  const [password, setPassword] = useState('secret123');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -27,146 +19,115 @@ export default function LoginScreen() {
       return;
     }
 
-    const success = await login({ email, password });
-    
-    if (success) {
+    setLoading(true);
+
+    try {
+      console.log('Enviando login a http://localhost:3000/api/auth/login');
+
+      const response = await axios.post('http://localhost:3000/api/auth/login', {
+        email: email,
+        password: password
+      });
+
+      console.log('Login exitoso:', response.data);
+
+      // Guardar tokens (por ahora en variables simples)
+      const { accessToken, refreshToken, user } = response.data;
+
+      console.log('Access Token:', accessToken);
+      console.log('User:', user);
+
+      Alert.alert('Éxito', `Bienvenido ${user.email}`);
+
+      // Navegar a tabs
       router.replace('/(tabs)');
+
+    } catch (error: any) {
+      console.error('Error en login:', error.response?.data || error.message);
+
+      if (error.response?.status === 401) {
+        Alert.alert('Error', 'Credenciales incorrectas');
+      } else if (error.response?.status === 404) {
+        Alert.alert('Error', 'Usuario no encontrado');
+      } else {
+        Alert.alert('Error', 'No se pudo conectar al servidor');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return <Loading fullScreen message="Iniciando sesión..." />;
-  }
-
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Sistema Escolar</Text>
-          <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
-        </View>
+      <View style={styles.container}>
+        <Text style={styles.title}>Iniciar Sesión</Text>
 
-        {error && (
-          <ErrorMessage 
-            error={error} 
-            onDismiss={clearError}
-            onRetry={() => handleLogin()}
-          />
-        )}
+        <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+        />
 
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="tu@email.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
+        <TextInput
+            style={styles.input}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+        />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Contraseña</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-          </View>
-
-          <TouchableOpacity 
-            style={styles.button} 
+        <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={loading}
-          >
-            <Text style={styles.buttonText}>Iniciar Sesión</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.linkButton}
-            onPress={() => router.push('/register')}
-          >
-            <Text style={styles.linkText}>
-              ¿No tienes cuenta? Regístrate
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        >
+          <Text style={styles.buttonText}>
+            {loading ? 'Verificando...' : 'ENTRAR'}
+          </Text>
+        </TouchableOpacity>
+      </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 24,
-  },
-  header: {
-    marginTop: 60,
-    marginBottom: 40,
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#FFFFFF',
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#007AFF',
     textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  form: {
-    flex: 1,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    marginBottom: 30,
+    color: '#000000',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
-    padding: 16,
+    borderColor: '#CCCCCC',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#FFFFFF',
+    color: '#000000',
   },
   button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    padding: 18,
+    backgroundColor: '#3B82F6',
+    padding: 15,
+    borderRadius: 8,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 10,
+  },
+  buttonDisabled: {
+    backgroundColor: '#9CA3AF',
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  linkButton: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  linkText: {
-    color: '#007AFF',
+    color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: 'bold',
   },
 });

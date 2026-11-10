@@ -11,5 +11,5 @@ export interface User {
 }
 
 export interface UserMeResponse {
-    user: User;
+    data: User;
 }

@@ -2,9 +2,9 @@
  * Formulario para crear/editar estudiantes
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, Text, Alert, Keyboard } from 'react-native';
-import { Student } from '../../../../Practica2910/react_native_102/src/types/student';
+import { Student } from '../types/student';
 
 interface StudentFormProps {
   student?: Student;
@@ -18,6 +18,15 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
   const [matricula, setMatricula] = useState(student?.matricula || '');
   const [email, setEmail] = useState(student?.email || '');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!student) {
+      setNombre('');
+      setApellido('');
+      setMatricula('');
+      setEmail('');
+    }
+  }, [student]);
 
   const handleSubmit = async () => {
     if (!nombre.trim() || !apellido.trim() || !matricula.trim() || !email.trim()) {
@@ -41,63 +50,50 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
     }
   };
 
-  const resetForm = useCallback(() => {
-    setNombre('');
-    setApellido('');
-    setMatricula('');
-    setEmail('');
-  }, []);
-
-  useEffect(() => {
-    if (!student) {
-      resetForm();
-    }
-  }, [student, resetForm]);
-
   return (
-    <View style={styles.container}>
-      <TextInput
-        style={styles.input}
-        placeholder="Nombre"
-        value={nombre}
-        onChangeText={setNombre}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Apellido"
-        value={apellido}
-        onChangeText={setApellido}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Matrícula"
-        value={matricula}
-        onChangeText={setMatricula}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+      <View style={styles.container}>
+        <TextInput
+            style={styles.input}
+            placeholder="Nombre"
+            value={nombre}
+            onChangeText={setNombre}
+        />
+        <TextInput
+            style={styles.input}
+            placeholder="Apellido"
+            value={apellido}
+            onChangeText={setApellido}
+        />
+        <TextInput
+            style={styles.input}
+            placeholder="Matrícula"
+            value={matricula}
+            onChangeText={setMatricula}
+        />
+        <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+        />
 
-      <View style={styles.buttons}>
-        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-          <Text style={styles.cancelText}>Cancelar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.submitButton, submitting && styles.submitButtonDisabled]} 
-          onPress={handleSubmit}
-          disabled={submitting}
-        >
-          <Text style={styles.submitText}>
-            {student ? 'Actualizar' : 'Crear'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.buttons}>
+          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+            <Text style={styles.cancelText}>Cancelar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+              style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={submitting}
+          >
+            <Text style={styles.submitText}>
+              {student ? 'Actualizar' : 'Crear'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
   );
 }
 

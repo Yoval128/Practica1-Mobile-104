@@ -1,11 +1,8 @@
-/**
- * Hook personalizado para manejo de autenticación
- */
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
+
 import * as authApi from '../api/auth.api';
-import { saveAccessToken, saveRefreshToken, getAccessToken, clearTokens } from '../utils/storage';
+import { saveTokens, getAccessToken, clearTokens } from '../utils/storage';
 import { handleApiError, ApiError } from '../utils/errorHandler';
 import { User } from '../types/user';
 
@@ -20,121 +17,179 @@ interface UseAuthReturn extends UseAuthState {
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  checkAuth: () => Promise<void>;
+  checkAuth: (signal?: AbortSignal) => Promise<void>;
   clearError: () => void;
 }
 
 export function useAuth(): UseAuthReturn {
   const router = useRouter();
+
   const [state, setState] = useState<UseAuthState>({
     user: null,
-    loading: false,
+    loading: true,
     error: null,
     isAuthenticated: false,
   });
 
-  const isMounted = useRef(true);
+  const isMountedRef = useRef(false);
+  const operationIdRef = useRef(0);
 
-  const checkAuth = useCallback(async () => {
+  /**
+   * Comprobar autenticación con soporte de AbortSignal
+   */
+  const checkAuth = useCallback(async (signal?: AbortSignal) => {
+    const operationId = ++operationIdRef.current;
+
     try {
       const token = await getAccessToken();
+
+      if (!isMountedRef.current || operationId !== operationIdRef.current || signal?.aborted) return;
+
       if (!token) {
-        if (isMounted.current) {
-          setState(prev => ({ ...prev, isAuthenticated: false }));
-        }
-        return;
-      }
-
-      if (isMounted.current) {
-        setState(prev => ({ ...prev, loading: true }));
-      }
-
-      const user = await authApi.getCurrentUser();
-
-      if (isMounted.current) {
-        setState({
-          user,
-          loading: false,
-          error: null,
-          isAuthenticated: true,
-        });
-      }
-    } catch (error) {
-      if (isMounted.current) {
         setState({
           user: null,
           loading: false,
           error: null,
           isAuthenticated: false,
         });
+        return;
       }
+
+      setState(prev => ({
+        ...prev,
+        loading: true,
+        error: null,
+      }));
+
+      const user = await authApi.getCurrentUser(signal);
+
+      if (!isMountedRef.current || operationId !== operationIdRef.current || signal?.aborted) return;
+
+      setState({
+        user,
+        loading: false,
+        error: null,
+        isAuthenticated: true,
+      });
+
+    } catch (error: any) {
+      if (signal?.aborted || !isMountedRef.current || operationId !== operationIdRef.current) return;
+
+      try {
+        await clearTokens();
+      } catch (storageError) {
+        console.error('Error limpiando sesión:', storageError);
+      }
+
+      if (!isMountedRef.current || operationId !== operationIdRef.current) return;
+
+      setState({
+        user: null,
+        loading: false,
+        error: null,
+        isAuthenticated: false,
+      });
     }
   }, []);
 
+  /**
+   * Iniciar sesión
+   */
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    if (isMounted.current) {
-      setState(prev => ({ ...prev, loading: true, error: null }));
-    }
+    const operationId = ++operationIdRef.current;
+
+    setState(prev => ({
+      ...prev,
+      loading: true,
+      error: null,
+    }));
 
     try {
       const response = await authApi.login({ email, password });
 
-      await saveAccessToken(response.token);
-      await saveRefreshToken(response.refreshToken);
+      if (!isMountedRef.current || operationId !== operationIdRef.current) return false;
 
-      if (isMounted.current) {
-        setState({
-          user: response.user,
-          loading: false,
-          error: null,
-          isAuthenticated: true,
-        });
-      }
+      // Actualizado a accessToken
+      await saveTokens(response.accessToken, response.refreshToken);
+
+      if (!isMountedRef.current || operationId !== operationIdRef.current) return false;
+
+      setState({
+        user: response.user,
+        loading: false,
+        error: null,
+        isAuthenticated: true,
+      });
 
       return true;
+
     } catch (error) {
+      if (!isMountedRef.current || operationId !== operationIdRef.current) return false;
+
       const apiError = handleApiError(error);
-      if (isMounted.current) {
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          error: apiError,
-          isAuthenticated: false,
-        }));
-      }
+
+      setState(prev => ({
+        ...prev,
+        user: null,
+        loading: false,
+        error: apiError,
+        isAuthenticated: false,
+      }));
+
       return false;
     }
   }, []);
 
+  /**
+   * Registrar usuario
+   */
   const register = useCallback(async (email: string, password: string): Promise<boolean> => {
-    if (isMounted.current) {
-      setState(prev => ({ ...prev, loading: true, error: null }));
-    }
+    const operationId = ++operationIdRef.current;
+
+    setState(prev => ({
+      ...prev,
+      loading: true,
+      error: null,
+    }));
 
     try {
       await authApi.register({ email, password });
+
+      if (!isMountedRef.current || operationId !== operationIdRef.current) return false;
+
       return await login(email, password);
+
     } catch (error) {
-      const apiError = handleApiError(error);
-      if (isMounted.current) {
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          error: apiError,
-        }));
-      }
+      if (!isMountedRef.current || operationId !== operationIdRef.current) return false;
+
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: handleApiError(error),
+      }));
+
       return false;
     }
   }, [login]);
 
-  const logout = useCallback(async () => {
+  /**
+   * Cerrar sesión
+   */
+  const logout = useCallback(async (): Promise<void> => {
+    operationIdRef.current++;
+
     try {
       await authApi.logout();
     } catch (error) {
-      // Ignorar errores de logout
+      console.warn('Error al cerrar sesión en el servidor:', error);
     } finally {
-      await clearTokens();
-      if (isMounted.current) {
+      try {
+        await clearTokens();
+      } catch (error) {
+        console.error('Error eliminando tokens:', error);
+      }
+
+      if (isMountedRef.current) {
         setState({
           user: null,
           loading: false,
@@ -142,22 +197,28 @@ export function useAuth(): UseAuthReturn {
           isAuthenticated: false,
         });
       }
+
       router.replace('/');
     }
   }, [router]);
 
   const clearError = useCallback(() => {
-    if (isMounted.current) {
-      setState(prev => ({ ...prev, error: null }));
-    }
+    setState(prev => ({
+      ...prev,
+      error: null,
+    }));
   }, []);
 
   useEffect(() => {
-    isMounted.current = true;
-    checkAuth();
+    isMountedRef.current = true;
+    const abortController = new AbortController();
+
+    checkAuth(abortController.signal);
 
     return () => {
-      isMounted.current = false;
+      isMountedRef.current = false;
+      operationIdRef.current++;
+      abortController.abort();
     };
   }, [checkAuth]);
 

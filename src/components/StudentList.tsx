@@ -1,55 +1,124 @@
+
 /**
  * Componente de lista de estudiantes
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, FlatList, TextInput, StyleSheet, Text } from 'react-native';
-import StudentCard from '../../../../Practica2910/react_native_102/src/components/StudentCard';
-import { Student } from '../../../../Practica2910/react_native_102/src/types/student';
+import React, { useState, useMemo, useCallback } from 'react';
+
+import {
+  View,
+  FlatList,
+  TextInput,
+  StyleSheet,
+  Text,
+  RefreshControl,
+  ListRenderItem,
+} from 'react-native';
+
+import StudentCard from './StudentCard';
+import { Student } from '../types/student';
 
 interface StudentListProps {
   students: Student[];
   onStudentPress: (student: Student) => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
-export default function StudentList({ students, onStudentPress }: StudentListProps) {
+function StudentList({
+                       students,
+                       onStudentPress,
+                       onRefresh,
+                       refreshing = false,
+                     }: StudentListProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Filtrar estudiantes
   const filteredStudents = useMemo(() => {
-    if (!searchQuery) return students;
-    
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) return students;
+
     return students.filter(student =>
-      student.nombre.toLowerCase().includes(query) ||
-      student.apellido.toLowerCase().includes(query) ||
-      student.matricula.toLowerCase().includes(query)
+        student.nombre.toLowerCase().includes(query) ||
+        student.apellido.toLowerCase().includes(query) ||
+        student.matricula.toLowerCase().includes(query)
     );
   }, [students, searchQuery]);
 
-  const renderStudent = ({ item, index }: { item: Student; index: number }) => (
-    <StudentCard student={item} onPress={() => onStudentPress(item)} />
+  // Controlar selección del estudiante
+  const handleStudentPress = useCallback(
+      (student: Student) => {
+        onStudentPress(student);
+      },
+      [onStudentPress]
+  );
+
+  // Renderizar cada estudiante
+  const renderStudent: ListRenderItem<Student> = useCallback(
+      ({ item }) => (
+          <StudentCard
+              student={item}
+              onPress={() => handleStudentPress(item)}
+          />
+      ),
+      [handleStudentPress]
+  );
+
+  // Obtener identificador único
+  const keyExtractor = useCallback(
+      (item: Student) => item.id.toString(),
+      []
+  );
+
+  // Componente cuando no hay resultados
+  const ListEmpty = useMemo(
+      () => (
+          <Text style={styles.emptyText}>
+            No se encontraron estudiantes
+          </Text>
+      ),
+      []
   );
 
   return (
-    <View style={styles.container}>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Buscar por nombre, apellido o matrícula..."
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
-      <FlatList
-        data={filteredStudents}
-        renderItem={renderStudent}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>No se encontraron estudiantes</Text>
-        }
-      />
-    </View>
+      <View style={styles.container}>
+        <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar por nombre, apellido o matrícula..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel="Buscar estudiantes"
+        />
+
+        <FlatList
+            data={filteredStudents}
+            renderItem={renderStudent}
+            keyExtractor={keyExtractor}
+            contentContainerStyle={styles.listContent}
+            keyboardShouldPersistTaps="handled"
+            removeClippedSubviews
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            refreshControl={
+              onRefresh ? (
+                  <RefreshControl
+                      refreshing={refreshing}
+                      onRefresh={onRefresh}
+                      colors={['#3B82F6']}
+                  />
+              ) : undefined
+            }
+            ListEmptyComponent={ListEmpty}
+        />
+      </View>
   );
 }
+
+export default React.memo(StudentList);
 
 const styles = StyleSheet.create({
   container: {
@@ -67,6 +136,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
+    flexGrow: 1,
   },
   emptyText: {
     textAlign: 'center',
